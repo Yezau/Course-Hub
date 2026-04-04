@@ -1,0 +1,2 @@
+JWT_SECRET=replace-with-a-long-random-secret
+SITE_NAME=课程网站

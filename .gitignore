@@ -1,0 +1,43 @@
+# dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# build outputs
+dist/
+frontend/dist/
+
+# logs
+*.log
+backend/*.log
+frontend/*.log
+
+# cloudflare local state
+.wrangler/
+backend/.wrangler/
+
+# local env files and secrets
+.env
+.env.*
+!.env.production.example
+backend/.dev.vars
+backend/.dev.vars.*
+!backend/.dev.vars.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.production.example
+
+# system files
+.DS_Store
+Thumbs.db
+
+# exclude document files
+*.doc
+*.docx
+*.pptx
+*.pdf
+*.txt
+
+*.vscode
+*.tmp
+*.github
