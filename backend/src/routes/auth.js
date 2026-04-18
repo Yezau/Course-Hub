@@ -32,6 +32,7 @@ import {
 const app = new Hono();
 const ENABLED_SETTING_VALUES = new Set(["1", "true", "yes", "on"]);
 const DEFAULT_JWT_EXPIRES_IN_SECONDS = 7 * 24 * 60 * 60;
+const SQL_NOW_UTC8 = "datetime('now', '+8 hours')";
 const JWT_DURATION_UNIT_IN_SECONDS = {
   s: 1,
   m: 60,
@@ -431,7 +432,7 @@ app.post("/login", async (c) => {
     await c.env.DB.prepare(
       `
       UPDATE users
-      SET last_login = CURRENT_TIMESTAMP
+      SET last_login = ${SQL_NOW_UTC8}
       WHERE id = ?
     `,
     )

@@ -182,6 +182,7 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/utils/api'
 import { renderMarkdown } from '@/utils/markdown'
 import { buildPostRequestBody, getAuthorInitial, getPostMediaList, hasPostTitle } from '@/utils/postUtils'
+import { formatUtc8DateTime, getUtc8Timestamp } from '@/utils/dateTime'
 
 const route = useRoute()
 const router = useRouter()
@@ -220,8 +221,8 @@ const canManagePin = computed(() => {
 const hasPostBeenEdited = computed(() => {
   if (!post.value?.updated_at || !post.value?.created_at) return false
 
-  const createdAt = new Date(post.value.created_at).getTime()
-  const updatedAt = new Date(post.value.updated_at).getTime()
+  const createdAt = getUtc8Timestamp(post.value.created_at)
+  const updatedAt = getUtc8Timestamp(post.value.updated_at)
 
   if (Number.isNaN(createdAt) || Number.isNaN(updatedAt)) return false
   return updatedAt - createdAt >= 60000
@@ -294,15 +295,17 @@ const editEditorSeed = computed(() => {
 })
 
 function formatDate(dateString) {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleString('zh-CN', { hour12: false })
+  return formatUtc8DateTime(dateString, '')
 }
 
 function formatRelativeTime(dateString) {
   if (!dateString) return ''
 
   const now = Date.now()
-  const targetTime = new Date(dateString).getTime()
+  const targetTime = getUtc8Timestamp(dateString)
+  if (!Number.isFinite(targetTime)) {
+    return ''
+  }
   const diffMinutes = Math.floor((now - targetTime) / 60000)
 
   if (diffMinutes < 1) return '刚刚发布'

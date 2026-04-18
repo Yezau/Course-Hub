@@ -25,6 +25,8 @@ const LEGACY_SITE_SETTING_MIGRATIONS = [
 const OBSOLETE_SITE_SETTING_KEYS = ["site_short_name", "site_tagline"];
 const RUNTIME_SCHEMA_VERSION_KEY = "runtime_schema_version";
 const RUNTIME_SCHEMA_VERSION = "20260403";
+const SQL_NOW_UTC8 = "datetime('now', '+8 hours')";
+const SQL_DEFAULT_NOW_UTC8 = "(datetime('now', '+8 hours'))";
 
 async function isRuntimeSchemaUpToDate(db) {
   try {
@@ -66,11 +68,11 @@ async function updateRuntimeSchemaVersion(db) {
     .prepare(
       `
       INSERT INTO site_settings (setting_key, setting_value, updated_by, updated_at)
-      VALUES (?, ?, NULL, CURRENT_TIMESTAMP)
+      VALUES (?, ?, NULL, ${SQL_NOW_UTC8})
       ON CONFLICT(setting_key) DO UPDATE SET
         setting_value = excluded.setting_value,
         updated_by = excluded.updated_by,
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = ${SQL_NOW_UTC8}
     `,
     )
     .bind(RUNTIME_SCHEMA_VERSION_KEY, RUNTIME_SCHEMA_VERSION)
@@ -253,8 +255,8 @@ async function createCoreTables(db) {
         real_name VARCHAR(50),
         student_id VARCHAR(20),
         avatar_url TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
+        updated_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
         last_login DATETIME
       )
     `,
@@ -264,7 +266,7 @@ async function createCoreTables(db) {
         parent_id INTEGER,
         name VARCHAR(255) NOT NULL,
         creator_id INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
         FOREIGN KEY (parent_id) REFERENCES material_folders(id),
         FOREIGN KEY (creator_id) REFERENCES users(id),
         UNIQUE(parent_id, name)
@@ -281,7 +283,7 @@ async function createCoreTables(db) {
         file_type VARCHAR(100),
         uploader_id INTEGER NOT NULL,
         download_count INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
         FOREIGN KEY (folder_id) REFERENCES material_folders(id),
         FOREIGN KEY (uploader_id) REFERENCES users(id)
       )
@@ -303,8 +305,8 @@ async function createCoreTables(db) {
         closed_by INTEGER,
         attachment_key TEXT,
         created_by INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
+        updated_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
         FOREIGN KEY (created_by) REFERENCES users(id),
         FOREIGN KEY (closed_by) REFERENCES users(id)
       )
@@ -323,7 +325,7 @@ async function createCoreTables(db) {
         score INTEGER,
         feedback TEXT,
         status VARCHAR(20) DEFAULT 'submitted',
-        submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        submitted_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
         graded_at DATETIME,
         graded_by INTEGER,
         FOREIGN KEY (assignment_id) REFERENCES assignments(id),
@@ -346,8 +348,8 @@ async function createCoreTables(db) {
         is_pinned BOOLEAN DEFAULT FALSE,
         view_count INTEGER DEFAULT 0,
         reply_count INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
+        updated_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
         FOREIGN KEY (author_id) REFERENCES users(id)
       )
     `,
@@ -364,7 +366,7 @@ async function createCoreTables(db) {
         file_type VARCHAR(100),
         usage VARCHAR(20) NOT NULL DEFAULT 'gallery',
         sort_order INTEGER NOT NULL DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
         FOREIGN KEY (post_id) REFERENCES posts(id)
       )
     `,
@@ -377,7 +379,7 @@ async function createCoreTables(db) {
         author_id INTEGER NOT NULL,
         content TEXT NOT NULL,
         parent_id INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
         FOREIGN KEY (post_id) REFERENCES posts(id),
         FOREIGN KEY (author_id) REFERENCES users(id),
         FOREIGN KEY (parent_id) REFERENCES replies(id)
@@ -390,7 +392,7 @@ async function createCoreTables(db) {
         setting_key TEXT PRIMARY KEY,
         setting_value TEXT,
         updated_by INTEGER,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
         FOREIGN KEY (updated_by) REFERENCES users(id)
       )
     `,
@@ -403,7 +405,7 @@ async function createCoreTables(db) {
         actor_id INTEGER,
         message TEXT,
         is_read BOOLEAN DEFAULT FALSE,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (actor_id) REFERENCES users(id)
       )
@@ -451,7 +453,7 @@ async function ensureUserSchemaMigration(db) {
     db,
     "users",
     "updated_at",
-    "ALTER TABLE users ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP",
+    `ALTER TABLE users ADD COLUMN updated_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8}`,
   );
 
   await ensureColumn(
@@ -514,7 +516,7 @@ async function ensurePostSchemaMigration(db) {
       file_type VARCHAR(100),
       usage VARCHAR(20) NOT NULL DEFAULT 'gallery',
       sort_order INTEGER NOT NULL DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
       FOREIGN KEY (post_id) REFERENCES posts(id)
     )
   `,
@@ -592,7 +594,7 @@ async function ensureSiteSettingsSchema(db) {
       setting_key TEXT PRIMARY KEY,
       setting_value TEXT,
       updated_by INTEGER,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
       FOREIGN KEY (updated_by) REFERENCES users(id)
     )
   `,
@@ -612,7 +614,7 @@ async function ensureNotificationsSchema(db) {
         actor_id INTEGER,
         message TEXT,
         is_read BOOLEAN DEFAULT FALSE,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT ${SQL_DEFAULT_NOW_UTC8},
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (actor_id) REFERENCES users(id)
       )
@@ -658,7 +660,7 @@ async function migrateLegacySiteSettingsDefaults(db) {
       .prepare(
         `
       UPDATE site_settings
-      SET setting_value = ?, updated_at = CURRENT_TIMESTAMP
+      SET setting_value = ?, updated_at = ${SQL_NOW_UTC8}
       WHERE setting_key = ? AND setting_value = ?
     `,
       )
@@ -729,7 +731,7 @@ async function insertProductionBootstrapData(db, options) {
       .prepare(
         `
       UPDATE site_settings
-      SET updated_by = ?, updated_at = CURRENT_TIMESTAMP
+      SET updated_by = ?, updated_at = ${SQL_NOW_UTC8}
       WHERE setting_key IN ('site_name', 'homepage_title')
     `,
       )

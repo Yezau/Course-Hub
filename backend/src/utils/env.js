@@ -14,6 +14,7 @@ const KV_OPERATION_TIMEOUT_MS = 1500;
 const DEFAULT_PRODUCTION_ALLOWED_ORIGINS = ["https://*.pages.dev"];
 const DYNAMIC_ALLOWED_ORIGINS_SETTING_KEY = "allowed_origins";
 const ALLOWED_ORIGINS_CACHE_TTL_MS = 30 * 1000;
+const SQL_NOW_UTC8 = "datetime('now', '+8 hours')";
 
 let cachedRuntimeJwtSecret = "";
 let ensureJwtSecretPromise = null;
@@ -129,11 +130,11 @@ async function readOrCreateAutoJwtSecretFromDb(db) {
     .prepare(
       `
       INSERT INTO site_settings (setting_key, setting_value, updated_by, updated_at)
-      VALUES (?, ?, NULL, CURRENT_TIMESTAMP)
+      VALUES (?, ?, NULL, ${SQL_NOW_UTC8})
       ON CONFLICT(setting_key) DO UPDATE SET
         setting_value = excluded.setting_value,
         updated_by = excluded.updated_by,
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = ${SQL_NOW_UTC8}
     `,
     )
     .bind(AUTO_JWT_SECRET_DB_KEY, generatedSecret)

@@ -314,6 +314,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import api, { resolveApiUrl } from '@/utils/api'
+import { formatUtc8DateTime, getUtc8Timestamp } from '@/utils/dateTime'
 import { openProtectedFile, revokeObjectUrl } from '@/utils/fileDownload'
 import AppShell from '@/components/AppShell.vue'
 
@@ -576,8 +577,8 @@ const propertiesDialogData = computed(() => {
 function makeRowKey(row) { return row.kind === 'up' ? 'up' : `${row.kind}-${row.id}` }
 function sortFolders(list) {
   const copied = [...list]
-  if (sortOption.value === 'dateAsc') return copied.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
-  if (sortOption.value === 'dateDesc') return copied.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+  if (sortOption.value === 'dateAsc') return copied.sort((a, b) => getUtc8Timestamp(a.created_at, 0) - getUtc8Timestamp(b.created_at, 0))
+  if (sortOption.value === 'dateDesc') return copied.sort((a, b) => getUtc8Timestamp(b.created_at, 0) - getUtc8Timestamp(a.created_at, 0))
   if (sortOption.value === 'nameDesc') return copied.sort((a, b) => b.name.localeCompare(a.name, 'zh-CN'))
   return copied.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
 }
@@ -585,8 +586,8 @@ function sortMaterials(list) {
   const copied = [...list]
   if (sortOption.value === 'sizeAsc') return copied.sort((a, b) => (a.file_size || 0) - (b.file_size || 0))
   if (sortOption.value === 'sizeDesc') return copied.sort((a, b) => (b.file_size || 0) - (a.file_size || 0))
-  if (sortOption.value === 'dateAsc') return copied.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
-  if (sortOption.value === 'dateDesc') return copied.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+  if (sortOption.value === 'dateAsc') return copied.sort((a, b) => getUtc8Timestamp(a.created_at, 0) - getUtc8Timestamp(b.created_at, 0))
+  if (sortOption.value === 'dateDesc') return copied.sort((a, b) => getUtc8Timestamp(b.created_at, 0) - getUtc8Timestamp(a.created_at, 0))
   if (sortOption.value === 'nameDesc') return copied.sort((a, b) => b.file_name.localeCompare(a.file_name, 'zh-CN'))
   return copied.sort((a, b) => a.file_name.localeCompare(b.file_name, 'zh-CN'))
 }
@@ -598,9 +599,7 @@ function formatFileSize(bytes) {
   return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`
 }
 function formatDate(value) {
-  if (!value) return '—'
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleString('zh-CN')
+  return formatUtc8DateTime(value, '—')
 }
 function formatCompactType(type) {
   if (!type) return '目录/未知'

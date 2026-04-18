@@ -73,6 +73,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationsStore } from '@/stores/notifications'
 import { resolveAssetUrl } from '@/utils/api'
+import { formatUtc8MonthDayTime } from '@/utils/dateTime'
 
 const MAX_BADGE_COUNT = 99
 
@@ -116,9 +117,7 @@ function goToNotificationsPage() {
 }
 
 function formatDate(dateStr) {
-    if (!dateStr) return ''
-    const date = new Date(dateStr + 'Z')
-    return date.toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    return formatUtc8MonthDayTime(dateStr, '')
 }
 
 function handleClickOutside(event) {

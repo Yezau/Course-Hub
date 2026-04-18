@@ -200,6 +200,7 @@ import { useRouter } from 'vue-router'
 import AppShell from '@/components/AppShell.vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/utils/api'
+import { formatUtc8DateTime } from '@/utils/dateTime'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -377,22 +378,7 @@ watch(
 )
 
 function formatDateTime(value) {
-  if (!value) {
-    return '暂无记录'
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return '暂无记录'
-  }
-
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date)
+  return formatUtc8DateTime(value, '暂无记录')
 }
 
 function getRoleBadgeClass(role) {

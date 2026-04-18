@@ -147,6 +147,7 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/utils/api'
 import { stripMarkdown } from '@/utils/markdown'
 import { buildPostRequestBody, getAuthorInitial, getPostMediaKind, getPostMediaList, hasPostTitle } from '@/utils/postUtils'
+import { formatUtc8DateTime, getUtc8Timestamp } from '@/utils/dateTime'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -248,15 +249,17 @@ function getPreviewText(post, limit = 260) {
 }
 
 function formatDate(dateString) {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleString('zh-CN', { hour12: false })
+  return formatUtc8DateTime(dateString, '')
 }
 
 function formatRelativeTime(dateString) {
   if (!dateString) return ''
 
   const now = Date.now()
-  const targetTime = new Date(dateString).getTime()
+  const targetTime = getUtc8Timestamp(dateString)
+  if (!Number.isFinite(targetTime)) {
+    return ''
+  }
   const diffMinutes = Math.floor((now - targetTime) / 60000)
 
   if (diffMinutes < 1) return '刚刚发布'

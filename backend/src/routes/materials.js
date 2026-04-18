@@ -6,6 +6,7 @@ import { buildContentDisposition } from "../utils/security.js";
 import { ensureStorageQuotaForIncomingBytes } from "../utils/storage-quota.js";
 
 const app = new Hono();
+const SQL_NOW_UTC8 = "datetime('now', '+8 hours')";
 
 app.use("/*", authMiddleware);
 
@@ -299,8 +300,8 @@ async function duplicateMaterial(
   const result = await db
     .prepare(
       `
-    INSERT INTO materials (folder_id, file_name, file_key, file_size, file_type, uploader_id)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO materials (folder_id, file_name, file_key, file_size, file_type, uploader_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ${SQL_NOW_UTC8})
   `,
     )
     .bind(
@@ -342,8 +343,8 @@ async function duplicateFolderTree(
   const folderResult = await db
     .prepare(
       `
-    INSERT INTO material_folders (parent_id, name, creator_id)
-    VALUES (?, ?, ?)
+    INSERT INTO material_folders (parent_id, name, creator_id, created_at)
+    VALUES (?, ?, ?, ${SQL_NOW_UTC8})
   `,
     )
     .bind(targetParentId, nextFolderName, userId)
@@ -562,8 +563,8 @@ app.post("/folders", requireRole("teacher", "admin"), async (c) => {
 
     const result = await c.env.DB.prepare(
       `
-      INSERT INTO material_folders (parent_id, name, creator_id)
-      VALUES (?, ?, ?)
+      INSERT INTO material_folders (parent_id, name, creator_id, created_at)
+      VALUES (?, ?, ?, ${SQL_NOW_UTC8})
     `,
     )
       .bind(parentId, name, user.id)
@@ -880,8 +881,8 @@ app.post("/", requireRole("teacher", "admin"), async (c) => {
 
     const result = await c.env.DB.prepare(
       `
-      INSERT INTO materials (folder_id, file_name, file_key, file_size, file_type, uploader_id)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO materials (folder_id, file_name, file_key, file_size, file_type, uploader_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ${SQL_NOW_UTC8})
     `,
     )
       .bind(folderId, fileName, fileKey, file.size, contentType, user.id)

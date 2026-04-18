@@ -5,6 +5,20 @@ import { ensureStorageQuotaForIncomingBytes } from "../utils/storage-quota.js";
 const MENTION_BOUNDARY_PATTERN = /[\s([{"'“‘,，。！？!?:;；、]/;
 const MENTION_TRAILING_PUNCTUATION_PATTERN =
   /[.,!?;:，。！？；：、)\]}>"'”’]+$/g;
+const SQL_NOW_UTC8 = "datetime('now', '+8 hours')";
+const UTC8_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+function formatUtc8DateTime(date) {
+  const utc8Date = new Date(date.getTime() + UTC8_OFFSET_MS);
+  const year = utc8Date.getUTCFullYear();
+  const month = String(utc8Date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(utc8Date.getUTCDate()).padStart(2, "0");
+  const hour = String(utc8Date.getUTCHours()).padStart(2, "0");
+  const minute = String(utc8Date.getUTCMinutes()).padStart(2, "0");
+  const second = String(utc8Date.getUTCSeconds()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}
 
 function extractMentionUsernames(text = "") {
   const source = String(text || "");
@@ -64,7 +78,7 @@ async function parseAndNotifyMentions(
         const batch = users.map((u) =>
           db
             .prepare(
-              "INSERT INTO notifications (user_id, type, source_id, actor_id, message) VALUES (?, ?, ?, ?, ?)",
+              `INSERT INTO notifications (user_id, type, source_id, actor_id, message, created_at) VALUES (?, ?, ?, ?, ?, ${SQL_NOW_UTC8})`,
             )
             .bind(u.id, type, sourceId, actorId, `${actorName} 提到了您`),
         );
@@ -616,8 +630,8 @@ async function uploadPostMediaFiles(
 
       const result = await c.env.DB.prepare(
         `
-        INSERT INTO post_media (post_id, file_name, file_key, file_size, file_type, usage, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO post_media (post_id, file_name, file_key, file_size, file_type, usage, sort_order, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ${SQL_NOW_UTC8})
       `,
       )
         .bind(
@@ -787,8 +801,8 @@ app.post("/", async (c) => {
     const user = c.get("user");
     const result = await c.env.DB.prepare(
       `
-      INSERT INTO posts (title, summary, content, post_type, author_id)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO posts (title, summary, content, post_type, author_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ${SQL_NOW_UTC8}, ${SQL_NOW_UTC8})
     `,
     )
       .bind(
@@ -900,7 +914,7 @@ app.put("/:id", async (c) => {
     await c.env.DB.prepare(
       `
       UPDATE posts
-      SET title = ?, summary = ?, content = ?, post_type = ?, updated_at = CURRENT_TIMESTAMP
+      SET title = ?, summary = ?, content = ?, post_type = ?, updated_at = ${SQL_NOW_UTC8}
       WHERE id = ?
     `,
     )
@@ -1004,8 +1018,8 @@ app.post("/:id/replies", async (c) => {
 
     const result = await c.env.DB.prepare(
       `
-      INSERT INTO replies (post_id, author_id, content, parent_id)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO replies (post_id, author_id, content, parent_id, created_at)
+      VALUES (?, ?, ?, ?, ${SQL_NOW_UTC8})
     `,
     )
       .bind(id, user.id, trimmedContent, normalizedParentId)
@@ -1030,7 +1044,7 @@ app.post("/:id/replies", async (c) => {
       const targetUserId = parentReply ? parentReply.author_id : post.author_id;
       if (targetUserId !== user.id) {
         await c.env.DB.prepare(
-          "INSERT INTO notifications (user_id, type, source_id, actor_id, message) VALUES (?, ?, ?, ?, ?)",
+          `INSERT INTO notifications (user_id, type, source_id, actor_id, message, created_at) VALUES (?, ?, ?, ?, ?, ${SQL_NOW_UTC8})`,
         )
           .bind(
             targetUserId,
@@ -1067,7 +1081,7 @@ app.post("/:id/replies", async (c) => {
           parent_id: normalizedParentId,
           parent_author_id: null,
           parent_author_name: null,
-          created_at: new Date().toISOString(),
+          created_at: formatUtc8DateTime(new Date()),
         },
       },
       201,

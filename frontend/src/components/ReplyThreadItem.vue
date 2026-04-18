@@ -55,6 +55,7 @@
 import { computed } from 'vue'
 import { renderMarkdown } from '@/utils/markdown'
 import { getAuthorInitial } from '@/utils/postUtils'
+import { formatUtc8DateTime } from '@/utils/dateTime'
 import MentionTextarea from './MentionTextarea.vue'
 
 const props = defineProps({
@@ -98,8 +99,7 @@ const IMAGE_PREVIEW_LINK_PATTERN = /\.(png|jpe?g|gif|webp|bmp|svg)(?:$|[?#])/i
 const PROTECTED_MEDIA_LINK_PATTERN = /^\/(?:api\/)?posts\/media\/\d+\/file(?:$|[?#])/i
 
 function formatDate(dateString) {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleString('zh-CN', { hour12: false })
+  return formatUtc8DateTime(dateString, '')
 }
 
 function canPreviewFromHref(href) {

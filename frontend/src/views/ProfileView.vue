@@ -136,6 +136,7 @@ import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteSettingsStore } from '@/stores/siteSettings'
 import api, { resolveAssetUrl } from '@/utils/api'
+import { formatUtc8Date } from '@/utils/dateTime'
 import AppShell from '@/components/AppShell.vue'
 
 const authStore = useAuthStore()
@@ -209,16 +210,7 @@ const hasProfileChanges = computed(() => {
 })
 
 function formatDate(value) {
-  if (!value) return '未记录'
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '未记录'
-
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric'
-  }).format(date)
+  return formatUtc8Date(value, '未记录')
 }
 
 function syncFormWithUser(user) {

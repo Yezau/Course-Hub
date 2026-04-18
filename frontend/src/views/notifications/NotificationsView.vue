@@ -86,6 +86,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppShell from '@/components/AppShell.vue'
 import { useNotificationsStore } from '@/stores/notifications'
+import { formatUtc8MonthDayTime } from '@/utils/dateTime'
 
 const PAGE_SIZE = 20
 
@@ -97,14 +98,7 @@ const loadingMore = ref(false)
 const hasMore = ref(true)
 
 function formatDate(dateStr) {
-    if (!dateStr) return ''
-    const date = new Date(dateStr + 'Z')
-    return date.toLocaleString('zh-CN', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    })
+    return formatUtc8MonthDayTime(dateStr, '')
 }
 
 function resolveTargetPath(notification) {

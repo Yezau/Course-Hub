@@ -22,6 +22,7 @@ import { ensureStorageQuotaForIncomingBytes } from "../utils/storage-quota.js";
 
 const app = new Hono();
 const SITE_LOGO_OBJECT_KEY = "branding/site-logo";
+const SQL_NOW_UTC8 = "datetime('now', '+8 hours')";
 
 async function loadSiteSettings(db, keys = null) {
   let result;
@@ -57,11 +58,11 @@ async function saveSiteSetting(db, key, value, actorId = null) {
     .prepare(
       `
     INSERT INTO site_settings (setting_key, setting_value, updated_by, updated_at)
-    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    VALUES (?, ?, ?, ${SQL_NOW_UTC8})
     ON CONFLICT(setting_key) DO UPDATE SET
       setting_value = excluded.setting_value,
       updated_by = excluded.updated_by,
-      updated_at = CURRENT_TIMESTAMP
+      updated_at = ${SQL_NOW_UTC8}
   `,
     )
     .bind(key, value, actorId)
@@ -123,11 +124,11 @@ app.put("/", requireRole("admin"), async (c) => {
     await c.env.DB.prepare(
       `
       INSERT INTO site_settings (setting_key, setting_value, updated_by, updated_at)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ${SQL_NOW_UTC8})
       ON CONFLICT(setting_key) DO UPDATE SET
         setting_value = excluded.setting_value,
         updated_by = excluded.updated_by,
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = ${SQL_NOW_UTC8}
     `,
     )
       .bind(key, value, auditContext.actorId)

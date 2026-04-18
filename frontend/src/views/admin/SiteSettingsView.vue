@@ -197,6 +197,7 @@ import InfoTooltip from '@/components/InfoTooltip.vue'
 import SiteBrand from '@/components/SiteBrand.vue'
 import { defaultSiteSettings, useSiteSettingsStore } from '@/stores/siteSettings'
 import api, { resolveAssetUrl } from '@/utils/api'
+import { formatUtc8DateTime } from '@/utils/dateTime'
 
 const siteSettingsStore = useSiteSettingsStore()
 const FREE_TIER_STORAGE_QUOTA_MB = 10240
@@ -393,18 +394,7 @@ function syncSettings(settings) {
 }
 
 function formatDateTime(value) {
-  if (!value) return '暂无记录'
-
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return '暂无记录'
-
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(parsed)
+  return formatUtc8DateTime(value, '暂无记录')
 }
 
 function clearLogoUrl() {

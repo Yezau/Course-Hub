@@ -103,6 +103,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNotificationsStore } from '../stores/notifications'
 import { useSiteSettingsStore } from '@/stores/siteSettings'
+import { formatUtc8MonthDayTime } from '@/utils/dateTime'
 
 const props = defineProps({
   user: {
@@ -165,9 +166,7 @@ async function handleNotificationClick(notification) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return ''
-  const date = new Date(dateStr + 'Z')
-  return date.toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return formatUtc8MonthDayTime(dateStr, '')
 }
 
 // Close notifications dropdown when clicking outside

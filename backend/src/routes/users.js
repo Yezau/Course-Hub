@@ -22,6 +22,7 @@ import { enforceRateLimit } from "../utils/rate-limit.js";
 import { ensureStorageQuotaForIncomingBytes } from "../utils/storage-quota.js";
 
 const app = new Hono();
+const SQL_NOW_UTC8 = "datetime('now', '+8 hours')";
 
 app.get("/search", authMiddleware, async (c) => {
   try {
@@ -943,7 +944,7 @@ app.post("/:id/avatar", async (c) => {
     await c.env.DB.prepare(
       `
       UPDATE users
-      SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP
+      SET avatar_url = ?, updated_at = ${SQL_NOW_UTC8}
       WHERE id = ?
     `,
     )
@@ -1137,7 +1138,7 @@ app.put("/:id", async (c) => {
         real_name = ?,
         student_id = ?,
         avatar_url = ?,
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = ${SQL_NOW_UTC8}
       WHERE id = ?
     `,
     )
@@ -1161,7 +1162,7 @@ app.put("/:id", async (c) => {
       await c.env.DB.prepare(
         `
         UPDATE users
-        SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+        SET password_hash = ?, updated_at = ${SQL_NOW_UTC8}
         WHERE id = ?
       `,
       )
