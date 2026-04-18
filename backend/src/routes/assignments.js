@@ -20,6 +20,12 @@ app.use("/*", async (c, next) => {
 
 const MAX_ATTACHMENT_COUNT = 10;
 const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024;
+const UTC8_OFFSET_HOURS = 8;
+const UTC8_OFFSET_MS = UTC8_OFFSET_HOURS * 60 * 60 * 1000;
+const SQL_NOW_UTC8 = "datetime('now', '+8 hours')";
+const LOCAL_DATE_TIME_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/;
+const TIMEZONE_SUFFIX_PATTERN = /(Z|[+-]\d{2}:?\d{2})$/i;
 
 function getFilesTotalSize(files = []) {
   return (files || []).reduce((sum, file) => {
@@ -87,13 +93,58 @@ function toBoolean(value) {
   return value === true || value === 1 || value === "1";
 }
 
+function formatUtc8DateTime(date) {
+  const utc8Date = new Date(date.getTime() + UTC8_OFFSET_MS);
+  const year = utc8Date.getUTCFullYear();
+  const month = String(utc8Date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(utc8Date.getUTCDate()).padStart(2, "0");
+  const hour = String(utc8Date.getUTCHours()).padStart(2, "0");
+  const minute = String(utc8Date.getUTCMinutes()).padStart(2, "0");
+  const second = String(utc8Date.getUTCSeconds()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}
+
 function parseDate(value) {
   if (!value) return null;
 
-  const normalized =
-    typeof value === "string" ? value.replace(" ", "T") : value;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
 
-  const parsed = new Date(normalized);
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed.replace("T", " ");
+  if (!TIMEZONE_SUFFIX_PATTERN.test(trimmed)) {
+    const localMatch = normalized.match(LOCAL_DATE_TIME_PATTERN);
+    if (localMatch) {
+      const [
+        ,
+        year,
+        month,
+        day,
+        hour = "00",
+        minute = "00",
+        second = "00",
+      ] = localMatch;
+
+      const parsed = new Date(
+        Date.UTC(
+          Number(year),
+          Number(month) - 1,
+          Number(day),
+          Number(hour) - UTC8_OFFSET_HOURS,
+          Number(minute),
+          Number(second),
+        ),
+      );
+
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+  }
+
+  const parsed = new Date(trimmed);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
@@ -106,11 +157,7 @@ function normalizeDateTimeInput(value) {
   const parsed = parseDate(trimmed);
   if (!parsed) return null;
 
-  if (trimmed.length === 16) {
-    return `${trimmed.replace("T", " ")}:00`;
-  }
-
-  return trimmed.replace("T", " ");
+  return formatUtc8DateTime(parsed);
 }
 
 function validateAssignmentWindow(availableFrom, dueDate) {
@@ -434,7 +481,7 @@ async function uploadAttachments({
       key: fileKey,
       size: toNumber(file.size),
       type: file.type || "application/octet-stream",
-      uploaded_at: new Date().toISOString(),
+      uploaded_at: formatUtc8DateTime(new Date()),
     });
   }
 
@@ -590,9 +637,11 @@ app.post("/", requireRole("teacher", "admin"), async (c) => {
         due_date,
         total_score,
         reminder_hours,
-        created_by
+        created_by,
+        created_at,
+        updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ${SQL_NOW_UTC8}, ${SQL_NOW_UTC8})
     `,
     )
       .bind(
@@ -610,8 +659,8 @@ app.post("/", requireRole("teacher", "admin"), async (c) => {
     try {
       await c.env.DB.prepare(
         `
-        INSERT INTO notifications (user_id, type, source_id, actor_id, message)
-        SELECT id, 'assignment_new', ?, ?, ?
+        INSERT INTO notifications (user_id, type, source_id, actor_id, message, created_at)
+        SELECT id, 'assignment_new', ?, ?, ?, ${SQL_NOW_UTC8}
         FROM users WHERE role = 'student'
       `,
       )
@@ -712,7 +761,7 @@ app.patch("/:id", requireRole("teacher", "admin"), async (c) => {
         due_date = ?,
         total_score = ?,
         reminder_hours = ?,
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = ${SQL_NOW_UTC8}
       WHERE id = ?
     `,
     )
@@ -817,9 +866,9 @@ app.post("/:id/close", requireRole("teacher", "admin"), async (c) => {
       UPDATE assignments
       SET
         is_closed = 1,
-        closed_at = CURRENT_TIMESTAMP,
+        closed_at = ${SQL_NOW_UTC8},
         closed_by = ?,
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = ${SQL_NOW_UTC8}
       WHERE id = ?
     `,
     )
@@ -849,7 +898,7 @@ app.post("/:id/reopen", requireRole("teacher", "admin"), async (c) => {
         is_closed = 0,
         closed_at = NULL,
         closed_by = NULL,
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = ${SQL_NOW_UTC8}
       WHERE id = ?
     `,
     )
@@ -902,7 +951,7 @@ app.post("/:id/attachments", requireRole("teacher", "admin"), async (c) => {
     await c.env.DB.prepare(
       `
       UPDATE assignments
-      SET attachment_key = ?, updated_at = CURRENT_TIMESTAMP
+      SET attachment_key = ?, updated_at = ${SQL_NOW_UTC8}
       WHERE id = ?
     `,
     )
@@ -951,7 +1000,7 @@ app.delete(
       await c.env.DB.prepare(
         `
       UPDATE assignments
-      SET attachment_key = ?, updated_at = CURRENT_TIMESTAMP
+      SET attachment_key = ?, updated_at = ${SQL_NOW_UTC8}
       WHERE id = ?
     `,
       )
@@ -1178,7 +1227,7 @@ app.post("/:id/submit", requireRole("student"), async (c) => {
           feedback = NULL,
           graded_at = NULL,
           graded_by = NULL,
-          submitted_at = CURRENT_TIMESTAMP
+          submitted_at = ${SQL_NOW_UTC8}
         WHERE assignment_id = ? AND student_id = ?
       `,
       )
@@ -1192,8 +1241,8 @@ app.post("/:id/submit", requireRole("student"), async (c) => {
     } else {
       await c.env.DB.prepare(
         `
-        INSERT INTO submissions (assignment_id, student_id, content, file_keys, status)
-        VALUES (?, ?, ?, ?, 'submitted')
+        INSERT INTO submissions (assignment_id, student_id, content, file_keys, status, submitted_at)
+        VALUES (?, ?, ?, ?, 'submitted', ${SQL_NOW_UTC8})
       `,
       )
         .bind(
@@ -1293,7 +1342,7 @@ app.put(
         score = ?,
         feedback = ?,
         status = 'graded',
-        graded_at = CURRENT_TIMESTAMP,
+        graded_at = ${SQL_NOW_UTC8},
         graded_by = ?
       WHERE id = ?
     `,

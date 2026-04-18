@@ -1,11 +1,57 @@
+const UTC8_OFFSET_HOURS = 8
+const UTC8_OFFSET_MS = UTC8_OFFSET_HOURS * 60 * 60 * 1000
+const UTC8_DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/
+const TIMEZONE_SUFFIX_PATTERN = /(Z|[+-]\d{2}:?\d{2})$/i
+
+function toUtc8Parts(date) {
+  const utc8Date = new Date(date.getTime() + UTC8_OFFSET_MS)
+
+  return {
+    year: utc8Date.getUTCFullYear(),
+    month: String(utc8Date.getUTCMonth() + 1).padStart(2, '0'),
+    day: String(utc8Date.getUTCDate()).padStart(2, '0'),
+    hour: String(utc8Date.getUTCHours()).padStart(2, '0'),
+    minute: String(utc8Date.getUTCMinutes()).padStart(2, '0'),
+    second: String(utc8Date.getUTCSeconds()).padStart(2, '0')
+  }
+}
+
+function formatUtc8DateTime(date) {
+  const parts = toUtc8Parts(date)
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`
+}
+
 export function parseDate(value) {
   if (!value) return null
 
-  const normalized = typeof value === 'string'
-    ? value.replace(' ', 'T')
-    : value
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value
+  }
 
-  const parsed = new Date(normalized)
+  const trimmed = String(value).trim()
+  if (!trimmed) return null
+
+  const normalized = trimmed.replace('T', ' ')
+  if (!TIMEZONE_SUFFIX_PATTERN.test(trimmed)) {
+    const localMatch = normalized.match(UTC8_DATE_TIME_PATTERN)
+    if (localMatch) {
+      const [, year, month, day, hour = '00', minute = '00', second = '00'] = localMatch
+      const parsed = new Date(
+        Date.UTC(
+          Number(year),
+          Number(month) - 1,
+          Number(day),
+          Number(hour) - UTC8_OFFSET_HOURS,
+          Number(minute),
+          Number(second)
+        )
+      )
+
+      return Number.isNaN(parsed.getTime()) ? null : parsed
+    }
+  }
+
+  const parsed = new Date(trimmed)
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
@@ -14,6 +60,7 @@ export function formatDateTime(value, fallback = '未设置') {
   if (!parsed) return fallback
 
   return parsed.toLocaleString('zh-CN', {
+    timeZone: 'Asia/Shanghai',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -26,11 +73,7 @@ export function toDateTimeLocalValue(value) {
   const parsed = parseDate(value)
   if (!parsed) return ''
 
-  const year = parsed.getFullYear()
-  const month = String(parsed.getMonth() + 1).padStart(2, '0')
-  const day = String(parsed.getDate()).padStart(2, '0')
-  const hour = String(parsed.getHours()).padStart(2, '0')
-  const minute = String(parsed.getMinutes()).padStart(2, '0')
+  const { year, month, day, hour, minute } = toUtc8Parts(parsed)
 
   return `${year}-${month}-${day}T${hour}:${minute}`
 }
@@ -41,11 +84,10 @@ export function normalizeDateTimeForApi(value) {
   const trimmed = String(value).trim()
   if (!trimmed) return null
 
-  if (trimmed.length === 16) {
-    return `${trimmed.replace('T', ' ')}:00`
-  }
+  const parsed = parseDate(trimmed)
+  if (!parsed) return null
 
-  return trimmed.replace('T', ' ')
+  return formatUtc8DateTime(parsed)
 }
 
 export function formatFileSize(value) {

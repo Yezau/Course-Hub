@@ -283,6 +283,7 @@ import {
   formatFileSize,
   formatRelativeDeadline,
   getDueMeta,
+  parseDate,
   getStudentAssignmentState,
   getTeacherAssignmentState,
   getToneBadgeClass,
@@ -424,8 +425,8 @@ function getDescriptionPreview(text) {
 }
 
 function getDateValue(value, fallback) {
-  const parsed = new Date(String(value || '').replace(' ', 'T')).getTime()
-  return Number.isNaN(parsed) ? fallback : parsed
+  const parsed = parseDate(value)
+  return parsed ? parsed.getTime() : fallback
 }
 
 function getStudentTodoPriority(assignment) {
